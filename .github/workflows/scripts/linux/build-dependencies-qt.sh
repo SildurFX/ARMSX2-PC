@@ -259,7 +259,7 @@ mv "SPIRV-Tools-$SHADERC_SPIRVTOOLS" "spirv-tools"
 cd ..
 
 # ARM64 Linux fix, remove this if building deps doesn't work and try again
-cp "$INSTALLDIR/../fixes/SpvBuilder.h" "$INSTALLDIR/../deps-build/shaderc-2024.1/third_party/glslang/SPIRV/"
+cp "$INSTALLDIR/../fixes/SpvBuilder.h" "$INSTALLDIR/../deps-build/shaderc-$SHADERC/third_party/glslang/SPIRV/"
 
 patch -p1 < "$SCRIPTDIR/../common/shaderc-changes.patch"
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$INSTALLDIR" -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" -DSHADERC_SKIP_TESTS=ON -DSHADERC_SKIP_EXAMPLES=ON -DSHADERC_SKIP_COPYRIGHT_CHECK=ON -B build -G Ninja

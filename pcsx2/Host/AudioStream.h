@@ -147,9 +147,6 @@ private:
 	static std::unique_ptr<AudioStream> CreateSDLAudioStream(u32 sample_rate, const AudioStreamParameters& parameters,
 		bool stretch_enabled, Error* error);
 
-    static std::unique_ptr<AudioStream> CreateOboeAudioStream(u32 sample_rate, const AudioStreamParameters& parameters,
-        bool stretch_enabled, Error* error);
-
 	void AllocateBuffer();
 	void DestroyBuffer();
 

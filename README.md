@@ -5,8 +5,6 @@ This should be considered experimental.
 
 ## Building
 
-NOTE: As of now, it seems like some bugs are present if built in Release mode instead of Devel mode somehow. If you built with Release mode and encounter a weird crash when navigating the PCSX2 interface, build with Devel and see if it still happens
-
 As of now Im not providing binaries so you'll have to build it.
 [Building PCSX2](https://pcsx2.net/docs/advanced/building#building-on-linux) just follow these for your platform.
 There is a small issue with one of the dependencies downloaded by the build-dependencies-qt.sh script missing an import needed for ARM64 Linux, the script in this repo patches this so no intervention should be needed. 
