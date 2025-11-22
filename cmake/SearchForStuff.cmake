@@ -102,6 +102,10 @@ if(USE_VULKAN)
 	add_subdirectory(3rdparty/vulkan EXCLUDE_FROM_ALL)
 endif()
 
+if(ANDROID AND USE_VULKAN)
+	add_subdirectory(3rdparty/libadrenotools EXCLUDE_FROM_ALL)
+endif()
+
 add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
 disable_compiler_warnings_for_target(cubeb)
 disable_compiler_warnings_for_target(speex)
@@ -132,6 +136,7 @@ target_include_directories(KDAB::kddockwidgets INTERFACE
 if(_M_X86)
 	add_subdirectory(3rdparty/zydis EXCLUDE_FROM_ALL)
 elseif(_M_ARM64)
+	add_subdirectory(3rdparty/glslang EXCLUDE_FROM_ALL)
 	add_subdirectory(3rdparty/vixl EXCLUDE_FROM_ALL)
 endif()
 
