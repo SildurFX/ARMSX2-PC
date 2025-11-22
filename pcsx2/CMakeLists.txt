@@ -660,7 +660,7 @@ if(USE_VULKAN)
 		GS/Renderers/Vulkan/VKStreamBuffer.h
 		GS/Renderers/Vulkan/VKSwapChain.h
 	)
-	target_link_libraries(PCSX2_FLAGS INTERFACE vulkan-headers)
+	target_link_libraries(PCSX2_FLAGS INTERFACE vulkan-headers glslang)
 	target_include_directories(PCSX2_FLAGS INTERFACE ${SHADERC_INCLUDE_DIR})
 endif()
 
@@ -1122,7 +1122,7 @@ if(ANDROID)
 	target_sources(PCSX2 PRIVATE
 		${pcsx2LinuxSources}
 		${pcsx2LinuxHeaders}
-		../native-lib.cpp
+		../main.cpp
 	)
 elseif(LINUX)
 	target_sources(PCSX2 PRIVATE
@@ -1182,6 +1182,11 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
 	${LIBC_LIBRARIES}
 )
 
+if(ANDROID AND USE_VULKAN AND TARGET adrenotools)
+	target_link_libraries(PCSX2_FLAGS INTERFACE adrenotools)
+	target_compile_definitions(PCSX2_FLAGS INTERFACE USE_ADRENOTOOLS)
+endif()
+
 # Discord linking: only link when the option is enabled and the corresponding target exists
 # if(USE_DISCORD_SDK)
 # 	if(TARGET discord_partner_sdk::discord_partner_sdk)
@@ -1220,7 +1225,6 @@ elseif(ANDROID)
 	find_library(log-lib log)
 	target_link_directories(PCSX2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ../3rdparty/libs)
 	target_link_libraries(PCSX2_FLAGS INTERFACE
-		shaderc
 		oboe
 		android
 		${log-lib}
