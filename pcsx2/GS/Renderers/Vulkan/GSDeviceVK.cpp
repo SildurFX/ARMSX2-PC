@@ -202,11 +202,6 @@ bool GSDeviceVK::SelectInstanceExtensions(ExtensionList* extension_list, const W
 	if (wi.type == WindowInfo::Type::MacOS && !SupportsExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME, true))
 		return false;
 #endif
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-    if (wi.type == WindowInfo::Type::Android &&
-        !SupportsExtension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, true))
-        return false;
-#endif
 
 	// VK_EXT_debug_utils
 	if (enable_debug_utils && !SupportsExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, false))
@@ -907,9 +902,7 @@ bool GSDeviceVK::CreateCommandBuffers()
 		resources.needs_fence_wait = false;
 
 		VkCommandPoolCreateInfo pool_info = {
-			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr,
-			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			m_graphics_queue_family_index};
+			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, 0, m_graphics_queue_family_index};
 		res = vkCreateCommandPool(m_device, &pool_info, nullptr, &resources.command_pool);
 		if (res != VK_SUCCESS)
 		{
@@ -1718,9 +1711,8 @@ bool GSDeviceVK::InitSpinResources()
 	for (SpinResources& resources : m_spin_resources)
 	{
 		u32 index = &resources - &m_spin_resources[0];
-	VkCommandPoolCreateInfo pool_info = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-	pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	pool_info.queueFamilyIndex = m_spin_queue_family_index;
+		VkCommandPoolCreateInfo pool_info = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+		pool_info.queueFamilyIndex = m_spin_queue_family_index;
 		CHECKED_CREATE(vkCreateCommandPool, &pool_info, &resources.command_pool);
 		Vulkan::SetObjectName(m_device, resources.command_pool, "Spin Command Pool %u", index);
 
@@ -1981,7 +1973,7 @@ bool GSDeviceVK::AllocatePreinitializedGPUBuffer(u32 size, VkBuffer* gpu_buffer,
 	}
 
 	const VkBufferCreateInfo gpu_bci = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, size,
-		(gpu_usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT), VK_SHARING_MODE_EXCLUSIVE};
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE};
 	const VmaAllocationCreateInfo gpu_aci = {0, VMA_MEMORY_USAGE_GPU_ONLY, 0, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
 	VmaAllocationInfo ai;
 	res = vmaCreateBuffer(m_allocator, &gpu_bci, &gpu_aci, gpu_buffer, gpu_allocation, &ai);
@@ -1994,11 +1986,7 @@ bool GSDeviceVK::AllocatePreinitializedGPUBuffer(u32 size, VkBuffer* gpu_buffer,
 
 	const VkBufferCopy buf_copy = {0u, 0u, size};
 	fill_callback(cpu_ai.pMappedData);
-	// Avoid redundant flush if staging memory is HOST_COHERENT
-	VkMemoryPropertyFlags mem_props = 0;
-	vmaGetAllocationMemoryProperties(m_allocator, cpu_allocation, &mem_props);
-	if ((mem_props & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
-		vmaFlushAllocation(m_allocator, cpu_allocation, 0, size);
+	vmaFlushAllocation(m_allocator, cpu_allocation, 0, size);
 	vkCmdCopyBuffer(GetCurrentInitCommandBuffer(), cpu_buffer, *gpu_buffer, 1, &buf_copy);
 	DeferBufferDestruction(cpu_buffer, cpu_allocation);
 	return true;
@@ -2621,7 +2609,7 @@ bool GSDeviceVK::CreateDeviceAndSwapChain()
 bool GSDeviceVK::CheckFeatures()
 {
 	const VkPhysicalDeviceLimits& limits = m_device_properties.limits;
-	const u32 vendorID = m_device_properties.vendorID;
+	//const u32 vendorID = m_device_properties.vendorID;
 	//const bool isAMD = (vendorID == 0x1002 || vendorID == 0x1022);
 	//const bool isNVIDIA = (vendorID == 0x10DE);
 
@@ -2663,15 +2651,6 @@ bool GSDeviceVK::CheckFeatures()
 							   limits.pointSizeRange[1] >= f_upscale);
 	m_features.line_expand =
 		(m_device_features.wideLines && limits.lineWidthRange[0] <= f_upscale && limits.lineWidthRange[1] >= f_upscale);
-
-	// Mobile GPUs (Adreno/Mali) often emulate wide lines/points expensively; prefer vertex expansion there.
-	if (vendorID == 0x5143u || vendorID == 0x13B5u)
-	{
-		if (m_features.point_expand || m_features.line_expand)
-			Console.WriteLn("VK: Forcing vertex-based expansion for points/lines on mobile GPU (vendor 0x%X).", vendorID);
-		m_features.point_expand = false;
-		m_features.line_expand = false;
-	}
 
 	DevCon.WriteLn("Optional features:%s%s%s%s%s", m_features.primitive_id ? " primitive_id" : "",
 		m_features.texture_barrier ? " texture_barrier" : "", m_features.framebuffer_fetch ? " framebuffer_fetch" : "",
@@ -3588,9 +3567,6 @@ VkSampler GSDeviceVK::GetSampler(GSHWDrawConfig::SamplerSelector ss)
 		return it->second;
 
 	const bool aniso = (ss.aniso && GSConfig.MaxAnisotropy > 1 && m_device_features.samplerAnisotropy);
-	const float max_supported_aniso = m_device_features.samplerAnisotropy ?
-		std::max(1.0f, static_cast<float>(m_device_properties.limits.maxSamplerAnisotropy)) : 1.0f;
-	const float aniso_value = aniso ? std::min(static_cast<float>(GSConfig.MaxAnisotropy), max_supported_aniso) : 1.0f;
 
 	// See https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkSamplerCreateInfo.html#_description
 	// for the reasoning behind 0.25f here.
@@ -3605,8 +3581,8 @@ VkSampler GSDeviceVK::GetSampler(GSHWDrawConfig::SamplerSelector ss)
 			ss.tav ? VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE), // v
 		VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // w
 		0.0f, // lod bias
-	static_cast<VkBool32>(aniso), // anisotropy enable
-	aniso_value, // anisotropy
+		static_cast<VkBool32>(aniso), // anisotropy enable
+		aniso ? static_cast<float>(GSConfig.MaxAnisotropy) : 1.0f, // anisotropy
 		VK_FALSE, // compare enable
 		VK_COMPARE_OP_ALWAYS, // compare op
 		0.0f, // min lod
@@ -5654,7 +5630,7 @@ void GSDeviceVK::RenderHW(GSHWDrawConfig& config)
 		date_image = SetupPrimitiveTrackingDATE(config);
 		if (!date_image)
 		{
-			Console.WriteLn("VK: Failed to allocate DATE image, aborting draw.");
+			Console.Warning("VK: Failed to allocate DATE image, aborting draw.");
 			return;
 		}
 

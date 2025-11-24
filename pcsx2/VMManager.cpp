@@ -538,7 +538,7 @@ bool VMManager::PerformEarlyHardwareChecks(const char** error)
 		return false;
 	}
 #endif
-#elif defined(_M_ARM64) || defined(__ANDROID__)
+#elif defined(_M_ARM64) || defined(__aarch64__) || defined(__ANDROID__)
 	// Check page size. If it doesn't match, it is a fatal error.
 	const size_t runtime_host_page_size = HostSys::GetRuntimePageSize();
 	if (__pagesize != runtime_host_page_size)

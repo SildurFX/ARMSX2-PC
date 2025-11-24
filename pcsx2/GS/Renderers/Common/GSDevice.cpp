@@ -850,8 +850,8 @@ bool GSDevice::ResizeRenderTarget(GSTexture** t, int w, int h, bool preserve_con
 
 // Kinda grotty, but better than copy/pasting the relevant bits in..
 #define A_CPU 1
-#include "shaders/common/ffx_a.h"
-#include "shaders/common/ffx_cas.h"
+#include "bin/resources/shaders/common/ffx_a.h"
+#include "bin/resources/shaders/common/ffx_cas.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

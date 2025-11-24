@@ -299,11 +299,7 @@ VkBuffer GSTextureVK::AllocateUploadStagingBuffer(const void* data, u32 pitch, u
 
 	// And write the data.
 	CopyTextureDataForUpload(ai.pMappedData, data, pitch, upload_pitch, height);
-	// Avoid redundant flush if the staging memory is HOST_COHERENT
-	VkMemoryPropertyFlags mem_props = 0;
-	vmaGetAllocationMemoryProperties(GSDeviceVK::GetInstance()->GetAllocator(), allocation, &mem_props);
-	if ((mem_props & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
-		vmaFlushAllocation(GSDeviceVK::GetInstance()->GetAllocator(), allocation, 0, size);
+	vmaFlushAllocation(GSDeviceVK::GetInstance()->GetAllocator(), allocation, 0, size);
 	return buffer;
 }
 
